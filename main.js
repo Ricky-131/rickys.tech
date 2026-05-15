@@ -1,506 +1,178 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+// ── CURSOR ──
+const cursor = document.getElementById('cursor');
+const trail  = document.getElementById('cursor-trail');
+let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+let tx = mx, ty = my;
+const LERP = 0.13;
 
-let mapData, tilesetImage, playerImage;
-const TILE_SIZE = 16;
-let speed = 1;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
 
-let playerX = 23 * TILE_SIZE;
-let playerY = 4 * TILE_SIZE;
-let playerWidth = TILE_SIZE;
-let playerHeight = TILE_SIZE;
+(function tickCursor() {
+  cursor.style.left = mx + 'px';
+  cursor.style.top  = my + 'px';
+  tx += (mx - tx) * LERP;
+  ty += (my - ty) * LERP;
+  trail.style.left = tx + 'px';
+  trail.style.top  = ty + 'px';
+  requestAnimationFrame(tickCursor);
+})();
 
-let keys = {};
-let collisionRects = [];
-let interactionRects = [];
+document.querySelectorAll('a, button').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.classList.add('hovering');    trail.classList.add('hovering'); });
+  el.addEventListener('mouseleave', () => { cursor.classList.remove('hovering'); trail.classList.remove('hovering'); });
+});
 
+// ── GPU THREAD CANVAS ──
+const canvas = document.getElementById('gpu-canvas');
+const ctx    = canvas.getContext('2d');
+let W, H, particles = [], threads = [];
 
-let dialogueOpen = false;          // is the box open?
-let dialogueQueue = [];            // lines to show (split by '|')
-let currentLineIndex = 0;          // which line we're on
-let visibleLines = [];             // completed lines currently on screen (up to last 3)
-let displayedCurrent = "";         // what’s been typed of the current line
-let isTyping = false;              // currently typing the current line?
-let typeSpeed = 25;                // ms per character
-let typeTimerId = null;            // for cancelling typewriter if needed
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
 
-let tilesets = [];
+const NUM_PARTICLES = 120;
+const NUM_THREADS   = 40;
 
-async function loadTilesets() {
-    tilesets = await Promise.all(
-        mapData.tilesets.map(async (ts) => {
-            return {
-                firstgid: ts.firstgid,
-                image: await loadImage("assets/tilesets/" + ts.image.replace(/^.*[\\/]/, '')),
-                columns: ts.columns,
-                tilecount: ts.tilecount,
-                tileWidth: ts.tilewidth,
-                tileHeight: ts.tileheight
-            };
-        })
-    );
+for (let i = 0; i < NUM_THREADS; i++) {
+  threads.push({
+    x: Math.random() * 1.2 - 0.1,
+    y: Math.random() * 1.2 - 0.1,
+    vx: (Math.random() - 0.5) * 0.0005,
+    vy: (Math.random() - 0.5) * 0.0005,
+    speed: 0.3 + Math.random() * 0.7,
+    trail: [],
+  });
+}
+for (let i = 0; i < NUM_PARTICLES; i++) {
+  particles.push({
+    x:  Math.random() * 1.2 - 0.1,
+    y:  Math.random() * 1.2 - 0.1,
+    vx: (Math.random() - 0.5) * 0.001,
+    vy: (Math.random() - 0.5) * 0.001,
+    r:  0.5 + Math.random() * 1.5,
+    a:  0.2 + Math.random() * 0.5,
+  });
 }
 
+let t = 0;
+function drawGPU() {
+  ctx.clearRect(0, 0, W, H);
+  t += 0.003;
 
-let frameIndex = 1;
-let frameTimer = 0;
-const frameInterval = 10;
-let playerDirection = "down";
-let showCollisionDebug = false;
-
-// Background music shuffle system
-let audioFiles = [
-    "song1.mp3",
-    "song2.mp3",
-    "song3.mp3"
-    // Add more file names here
-];
-let currentTrackIndex = -1;
-let bgMusic = new Audio();
-bgMusic.volume = 0.3;
-let isMuted = false;
-let autoplayBlocked = false;
-
-
-function playRandomTrack() {
-    let nextIndex;
-    do {
-        nextIndex = Math.floor(Math.random() * audioFiles.length);
-    } while (audioFiles.length > 1 && nextIndex === currentTrackIndex);
-
-    currentTrackIndex = nextIndex;
-    bgMusic.src = `assets/audio/${audioFiles[currentTrackIndex]}`;
-    bgMusic.play().catch(() => {
-        console.log("Music autoplay blocked. Muting until user unmutes.");
-        autoplayBlocked = true;
-        isMuted = true;
-        bgMusic.muted = true;
-        document.getElementById("muteBtn").textContent = "🔇";
-    });
-}
-
-bgMusic.addEventListener("ended", playRandomTrack);
-
-
-async function loadJSON(url) {
-    const res = await fetch(url);
-    return res.json();
-}
-async function loadImage(url) {
-    return new Promise(resolve => {
-        const img = new Image();
-        img.src = url;
-        img.onload = () => resolve(img);
-    });
-}
-
-async function init() {
-    mapData = await loadJSON("assets/maps/map.json");
-    await loadTilesets();
-    playerImage = await loadImage("assets/sprites/player.png");
-    // bgMusic.play().catch(() => {
-    //     console.log("Music autoplay blocked, will start on first user interaction.");
-    // });
-    playRandomTrack();
-
-
-
-    loadCollisionData(mapData);
-    loadInteractionData(mapData);
-
-    requestAnimationFrame(gameLoop);
-}
-
-function loadCollisionData(mapData) {
-    const objLayer = mapData.layers.find(
-        l => l.name === "Collision" && l.type === "objectgroup"
-    );
-    if (!objLayer) return;
-    collisionRects = objLayer.objects.map(obj => ({
-        x: obj.x,
-        y: obj.y,
-        width: obj.width,
-        height: obj.height
-    }));
-}
-
-function loadInteractionData(mapData) {
-    const objLayer = mapData.layers.find(
-        l => l.name === "Interactions" && l.type === "objectgroup"
-    );
-    if (!objLayer) return;
-    interactionRects = objLayer.objects.map(obj => ({
-        x: obj.x,
-        y: obj.y,
-        width: obj.width,
-        height: obj.height,
-        name: obj.name || "",
-        text: obj.properties?.find(p => p.name === "text")?.value || "Nothing interesting here."
-    }));
-}
-
-function checkCollision(newX, newY) {
-    const mapPixelWidth = mapData.width * TILE_SIZE;
-    const mapPixelHeight = mapData.height * TILE_SIZE;
-
-    // Define bottom-half hitbox
-    const hitbox = {
-        x: newX + 4, // inset left/right
-        y: newY + playerHeight / 2, // halfway down
-        width: playerWidth - 8,
-        height: playerHeight / 2
-    };
-
-    // Map boundary check
-    if (
-        hitbox.x < 0 || hitbox.y < 0 ||
-        hitbox.x + hitbox.width > mapPixelWidth ||
-        hitbox.y + hitbox.height > mapPixelHeight
-    ) {
-        return true;
+  // connection lines
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    for (let j = i + 1; j < particles.length; j++) {
+      const q  = particles[j];
+      const dx = (p.x - q.x) * W;
+      const dy = (p.y - q.y) * H;
+      const d  = Math.sqrt(dx * dx + dy * dy);
+      if (d < 120) {
+        ctx.globalAlpha = (1 - d / 120) * 0.3;
+        ctx.strokeStyle = 'rgba(139,92,246,0.08)';
+        ctx.beginPath();
+        ctx.moveTo(p.x * W, p.y * H);
+        ctx.lineTo(q.x * W, q.y * H);
+        ctx.stroke();
+      }
     }
+  }
+  ctx.globalAlpha = 1;
 
-    // Collision rectangles
-    return collisionRects.some(rect =>
-        hitbox.x < rect.x + rect.width &&
-        hitbox.x + hitbox.width > rect.x &&
-        hitbox.y < rect.y + rect.height &&
-        hitbox.y + hitbox.height > rect.y
-    );
-}
-
-function checkInteraction() {
-    // Bottom-half hitbox for interaction
-    const hitbox = {
-        x: playerX + 4,
-        y: playerY + playerHeight / 2,
-        width: playerWidth - 8,
-        height: playerHeight / 2
-    };
-
-    return interactionRects.find(rect =>
-        hitbox.x < rect.x + rect.width &&
-        hitbox.x + hitbox.width > rect.x &&
-        hitbox.y < rect.y + rect.height &&
-        hitbox.y + hitbox.height > rect.y
-    );
-}
-
-function update() {
-    if (dialogueOpen) return;
-
-    let moveX = 0, moveY = 0;
-    if (keys["ArrowUp"] || keys["w"]) { moveY = -speed; playerDirection = "up"; }
-    if (keys["ArrowDown"] || keys["s"]) { moveY = speed; playerDirection = "down"; }
-    if (keys["ArrowLeft"] || keys["a"]) { moveX = -speed; playerDirection = "left"; }
-    if (keys["ArrowRight"] || keys["d"]) { moveX = speed; playerDirection = "right"; }
-
-    if (moveX !== 0 && !checkCollision(playerX + moveX, playerY)) playerX += moveX;
-    if (moveY !== 0 && !checkCollision(playerX, playerY + moveY)) playerY += moveY;
-
-    if (moveX !== 0 || moveY !== 0) {
-        frameTimer++;
-        if (frameTimer >= frameInterval) {
-            frameTimer = 0;
-            frameIndex = (frameIndex + 1) % 3;
-        }
-    } else {
-        frameIndex = 1;
+  // GPU thread streams
+  threads.forEach(th => {
+    th.x += th.vx;
+    th.y += th.vy + th.speed * 0.0003;
+    if (th.y > 1.1 || th.x < -0.1 || th.x > 1.1) {
+      th.x = Math.random(); th.y = -0.05; th.trail = [];
     }
-}
-
-function drawMap() {
-    //const tilesetCols = Math.floor(tilesetImage.width / TILE_SIZE);
-    const cameraX = playerX - canvas.width / 2 + playerWidth / 2;
-    const cameraY = playerY - canvas.height / 2 + playerHeight / 2;
-    
-    function drawTileLayer(layerName) {
-        const layer = mapData.layers.find(l => l.name === layerName && l.type === "tilelayer");
-        if (!layer) return;
-
-        for (let y = 0; y < mapData.height; y++) {
-            for (let x = 0; x < mapData.width; x++) {
-                let gid = layer.data[y * mapData.width + x];
-                if (gid === 0) continue; // Empty tile
-
-                // Find the correct tileset for this GID
-                let tileset = null;
-                for (let i = mapData.tilesets.length - 1; i >= 0; i--) {
-                    if (gid >= mapData.tilesets[i].firstgid) {
-                        tileset = tilesets[i]; // tilesets[] should be loaded earlier
-                        gid = gid - mapData.tilesets[i].firstgid;
-                        break;
-                    }
-                }
-                if (!tileset) continue;
-
-                const tilesetCols = Math.floor(tileset.image.width / TILE_SIZE);
-                const sx = (gid % tilesetCols) * TILE_SIZE;
-                const sy = Math.floor(gid / tilesetCols) * TILE_SIZE;
-                const dx = x * TILE_SIZE - cameraX;
-                const dy = y * TILE_SIZE - cameraY;
-
-                if (dx + TILE_SIZE >= 0 && dx < canvas.width &&
-                    dy + TILE_SIZE >= 0 && dy < canvas.height) {
-                    ctx.drawImage(tileset.image, sx, sy, TILE_SIZE, TILE_SIZE, dx, dy, TILE_SIZE, TILE_SIZE);
-                }
-            }
-        }
+    th.trail.push({ x: th.x, y: th.y });
+    if (th.trail.length > 20) th.trail.shift();
+    if (th.trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(th.trail[0].x * W, th.trail[0].y * H);
+      for (let i = 1; i < th.trail.length; i++) {
+        ctx.lineTo(th.trail[i].x * W, th.trail[i].y * H);
+      }
+      const last = th.trail[th.trail.length - 1];
+      const grad = ctx.createLinearGradient(
+        th.trail[0].x * W, th.trail[0].y * H,
+        last.x * W, last.y * H
+      );
+      grad.addColorStop(0, 'rgba(139,92,246,0)');
+      grad.addColorStop(1, 'rgba(139,92,246,0.4)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth   = 0.8;
+      ctx.stroke();
     }
+  });
 
-
-    drawTileLayer("Base");
-    drawTileLayer("Decor");
-
-    if (showCollisionDebug) {
-        ctx.strokeStyle = "red";
-        collisionRects.forEach(rect =>
-            ctx.strokeRect(rect.x - cameraX, rect.y - cameraY, rect.width, rect.height)
-        );
-    }
-
-    drawPlayer();
-    drawTileLayer("Above");
-}
-
-function drawPlayer() {
-    const dirMap = { down: 0, left: 1, right: 2, up: 3 };
-    const row = dirMap[playerDirection];
-    const px = canvas.width / 2 - playerWidth / 2;
-    const py = canvas.height / 2 - playerHeight / 2;
-
-    ctx.drawImage(playerImage, frameIndex * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE, px, py, playerWidth, playerHeight);
-}
-
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(" ");
-    let line = "";
-
-    for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + " ";
-        const testWidth = ctx.measureText(testLine).width;
-        if (testWidth > maxWidth && i > 0) {
-            ctx.fillText(line, x, y);
-            line = words[i] + " ";
-            y += lineHeight;
-        } else {
-            line = testLine;
-        }
-    }
-    ctx.fillText(line, x, y);
-}
-
-function drawDialogueBox() {
-    if (!dialogueOpen) return;
-
-    const boxHeight = 60;
-    const boxX = 0;
-    const boxY = canvas.height - boxHeight;
-    const boxWidth = canvas.width;
-
-    // Background
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
-
-    // Border
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-
-    // Build the lines we’ll draw: last up to 3 lines, with the current one at the end
-    let linesToDraw = [...visibleLines];
-    linesToDraw.push(displayedCurrent);
-    if (linesToDraw.length > 3) {
-        linesToDraw = linesToDraw.slice(-3);
-    }
-
-    // Text
-    ctx.fillStyle = "white";
-    ctx.font = "14px Arial";
-
-    const lineHeight = 16;
-    const startX = boxX + 10;
-    let y = boxY + 20;
-
-    // Clip so long lines don’t draw outside the box
-    ctx.save();
+  // particles
+  particles.forEach(p => {
+    p.x += p.vx + Math.sin(t + p.y * 8) * 0.0001;
+    p.y += p.vy + Math.cos(t + p.x * 8) * 0.0001;
+    if (p.x < -0.05) p.x = 1.05;
+    if (p.x > 1.05)  p.x = -0.05;
+    if (p.y < -0.05) p.y = 1.05;
+    if (p.y > 1.05)  p.y = -0.05;
     ctx.beginPath();
-    ctx.rect(boxX + 6, boxY + 6, boxWidth - 12, boxHeight - 12);
-    ctx.clip();
+    ctx.arc(p.x * W, p.y * H, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(139,92,246,${p.a})`;
+    ctx.fill();
+  });
 
-    for (const line of linesToDraw) {
-        ctx.fillText(line, startX, y);
-        y += lineHeight;
+  requestAnimationFrame(drawGPU);
+}
+drawGPU();
+
+// ── TYPEWRITER ──
+const roles = [
+  'GPU_Engineer()',
+  'CUDA_Developer()',
+  'HPC_Researcher()',
+  'DevOps_Engineer()',
+  'Systems_Programmer()',
+  // 'Linux_Ricer()',
+];
+let ri = 0, ci = 0, deleting = false;
+const tw = document.getElementById('typewriter');
+
+function type() {
+  const cur = roles[ri];
+  if (!deleting) {
+    tw.textContent = cur.slice(0, ++ci);
+    if (ci === cur.length) { deleting = true; setTimeout(type, 1800); return; }
+    setTimeout(type, 60);
+  } else {
+    tw.textContent = cur.slice(0, --ci);
+    if (ci === 0) { deleting = false; ri = (ri + 1) % roles.length; setTimeout(type, 300); return; }
+    setTimeout(type, 30);
+  }
+}
+type();
+
+// ── SCROLL REVEAL ──
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      e.target.querySelectorAll('.skill-fill').forEach(bar => {
+        bar.style.width = bar.dataset.w + '%';
+      });
     }
-    ctx.restore();
-}
+  });
+}, { threshold: 0.15 });
 
+document.querySelectorAll(
+  '.reveal, .timeline-item, .project-card, .skill-group'
+).forEach(el => observer.observe(el));
 
-function startTypewriter(text) {
-    activeDialogue = text;
-    displayedDialogue = "";
-    dialogueCharIndex = 0;
-    isTyping = true;
-    typeNextChar();
-}
-
-function typeNextChar() {
-    if (dialogueCharIndex < activeDialogue.length) {
-        displayedDialogue += activeDialogue[dialogueCharIndex];
-        dialogueCharIndex++;
-        setTimeout(typeNextChar, typeSpeed);
-    } else {
-        isTyping = false;
-    }
-}
-
-function startDialogue(rawText) {
-    // Split by '|' into single lines, trim, drop empties
-    dialogueQueue = rawText.split("|").map(s => s.trim()).filter(Boolean);
-
-    if (dialogueQueue.length === 0) return;
-
-    dialogueOpen = true;
-    visibleLines = [];
-    currentLineIndex = 0;
-    displayedCurrent = "";
-    isTyping = false;
-
-    startTypingCurrent();
-}
-
-function startTypingCurrent() {
-    clearTimeout(typeTimerId);
-    displayedCurrent = "";
-    isTyping = true;
-
-    const full = dialogueQueue[currentLineIndex];
-    let i = 0;
-
-    const tick = () => {
-        if (!isTyping) return; // in case we were interrupted
-        if (i < full.length) {
-            displayedCurrent += full[i++];
-            typeTimerId = setTimeout(tick, typeSpeed);
-        } else {
-            isTyping = false; // finished this line
-        }
-    };
-    tick();
-}
-
-function finishCurrentLine() {
-    // Instantly complete the current line
-    clearTimeout(typeTimerId);
-    displayedCurrent = dialogueQueue[currentLineIndex];
-    isTyping = false;
-}
-
-function advanceDialogue() {
-    // If typing, first finish the line
-    if (isTyping) {
-        finishCurrentLine();
-        return;
-    }
-
-    // Push the finished current line into visible history
-    visibleLines.push(displayedCurrent);
-    if (visibleLines.length > 3) visibleLines.shift();
-
-    // Move to next line, or close if none left
-    currentLineIndex++;
-    if (currentLineIndex < dialogueQueue.length) {
-        startTypingCurrent();
-    } else {
-        endDialogue();
-    }
-}
-
-function endDialogue() {
-    clearTimeout(typeTimerId);
-    dialogueOpen = false;
-    dialogueQueue = [];
-    currentLineIndex = 0;
-    visibleLines = [];
-    displayedCurrent = "";
-    isTyping = false;
-}
-
-
-function gameLoop() {
-    update();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawMap();
-    drawDialogueBox();
-    requestAnimationFrame(gameLoop);
-}
-
-window.addEventListener("keydown", e => {
-    keys[e.key] = true;
-
-    if (e.key === "Enter" || e.key === "f" || e.key === "F" || e.key === " ") {
-        if (!dialogueOpen) {
-            const zone = checkInteraction();
-            if (zone) {
-                // Start fresh dialogue from zone text
-                startDialogue(zone.text);
-            }
-        } else {
-            // Dialogue already open: either finish line or go to next/close
-            if (isTyping) {
-                finishCurrentLine();
-            } else {
-                advanceDialogue();
-            }
-        }
-    }
-});
-
-window.addEventListener("keyup", e => { keys[e.key] = false; });
-
-function simulateKeyPress(key, isDown) {
-    keys[key] = isDown;
-}
-
-document.querySelectorAll(".dpad .btn").forEach(btn => {
-    const dir = btn.dataset.dir;
-    let mappedKey = "";
-    if (dir === "up") mappedKey = "ArrowUp";
-    if (dir === "down") mappedKey = "ArrowDown";
-    if (dir === "left") mappedKey = "ArrowLeft";
-    if (dir === "right") mappedKey = "ArrowRight";
-
-    btn.addEventListener("touchstart", e => {
-        e.preventDefault();
-        simulateKeyPress(mappedKey, true);
-    });
-    btn.addEventListener("touchend", e => {
-        e.preventDefault();
-        simulateKeyPress(mappedKey, false);
-    });
-    btn.addEventListener("mousedown", () => simulateKeyPress(mappedKey, true));
-    btn.addEventListener("mouseup", () => simulateKeyPress(mappedKey, false));
-});
-
-const interactBtn = document.querySelector(".interact-btn");
-interactBtn.addEventListener("touchstart", e => {
-    e.preventDefault();
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-});
-interactBtn.addEventListener("mousedown", () => {
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
-});
-
-document.getElementById("muteBtn").addEventListener("click", () => {
-    isMuted = !isMuted;
-    bgMusic.muted = isMuted;
-    document.getElementById("muteBtn").textContent = isMuted ? "🔇" : "🔊";
-
-    // If autoplay was blocked and user unmutes, start playing immediately
-    if (!isMuted && autoplayBlocked) {
-        autoplayBlocked = false; // reset flag
-        bgMusic.play().catch(err => console.warn("Couldn't start music after unmuting:", err));
-    }
-});
-
-init();
+// stagger delays
+document.querySelectorAll('.project-card').forEach((el, i) => { el.style.transitionDelay = (i * 0.10) + 's'; });
+document.querySelectorAll('.skill-group').forEach( (el, i) => { el.style.transitionDelay = (i * 0.15) + 's'; });
+document.querySelectorAll('.timeline-item').forEach((el,i) => { el.style.transitionDelay = (i * 0.20) + 's'; });

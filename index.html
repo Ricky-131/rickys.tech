@@ -1,31 +1,293 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ricky's Portfolio</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ricky S — HPC Engineer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <canvas id="gameCanvas"></canvas>
 
-    <!-- Background Music Toggle Button -->
-    <button id="muteBtn" class="mute-btn">🔊</button>
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+<canvas id="gpu-canvas"></canvas>
 
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">rickys.iso</div>
+  <ul class="nav-links">
+    <li><a href="#about">about</a></li>
+    <li><a href="#experience">experience</a></li>
+    <li><a href="#projects">projects</a></li>
+    <li><a href="#skills">skills</a></li>
+    <li><a href="#contact">contact</a></li>
+  </ul>
+</nav>
 
-    <!-- D-pad container -->
-    <div class="dpad">
-        <button class="btn up" data-dir="up">▲</button>
-        <button class="btn left" data-dir="left">◀</button>
-        <button class="btn right" data-dir="right">▶</button>
-        <button class="btn down" data-dir="down">▼</button>
+<!-- FLOATING CV BUTTON -->
+<a id="dl-cv" href="Ricky_Resume.pdf" download="Ricky_S_Resume.pdf">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+  download CV
+</a>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <div class="hero-eyebrow">// HPC_ENGINEER &amp; FULL_STACK_DEV</div>
+  <h1 class="hero-name">Ricky S</h1>
+  <p class="hero-role"><span id="typewriter"></span></p>
+  <p class="hero-desc">
+    Computer Science undergrad specializing in GPU acceleration, parallel computing, and real-time data systems. Building at the intersection of high-performance compute and elegant software.
+  </p>
+  <div class="hero-cta">
+    <a href="#projects" class="btn-primary">view projects</a>
+    <a href="#contact" class="btn-outline">get in touch</a>
+  </div>
+  <div class="hero-stats">
+    <div><span class="stat-val">50K+</span><span class="stat-lbl">particles simulated</span></div>
+    <div><span class="stat-val">3×</span><span class="stat-lbl">GPU throughput gain</span></div>
+    <div><span class="stat-val">1GB/hr</span><span class="stat-lbl">log processing rate</span></div>
+    <div><span class="stat-val">7.68</span><span class="stat-lbl">CGPA · B.E. CSE</span></div>
+  </div>
+</section>
+
+<!-- ═══ ABOUT ═══ -->
+<section id="about">
+  <div class="section-label">// 01 — ABOUT</div>
+  <h2 class="section-title reveal">who i am</h2>
+  <div class="about-grid">
+    <div class="about-text reveal">
+      <p>I'm a <span>Computer Science undergraduate</span> at St. Joseph's College of Engineering, Chennai, with a deep focus on <span>High-Performance Computing</span> and GPU-accelerated systems.</p>
+      <p>My research internship at <span>C-DAC Chennai</span> had me processing 1GB+ of streaming log data per hour for zero-day attack detection — real-time, production-grade systems under strict timelines.</p>
+      <p>Before that, I automated infrastructure at <span>Arich Infotech</span>, wrangling 10+ virtualized environments and cutting manual configuration time by 20%.</p>
+      <p>When I'm not writing CUDA kernels or parallelizing workflows, I'm deep in Arch Linux rices — I literally run <span>Hyprland on Arch</span> with a custom Fish shell setup. The terminal is home.</p>
+      <div class="tag-list">
+        <span class="tag">CUDA C++</span>
+        <span class="tag">Parallel Programming</span>
+        <span class="tag">Linux</span>
+        <span class="tag">Docker</span>
+        <span class="tag">Python</span>
+        <span class="tag">Arch Linux</span>
+        <span class="tag">UiPath</span>
+        <span class="tag">MongoDB</span>
+      </div>
+    </div>
+    <div class="about-card reveal">
+      <div class="about-card-title">// education</div>
+      <div class="edu-item">
+        <div class="edu-inst">St. Joseph's College of Engineering</div>
+        <div class="edu-degree">B.E. Computer Science &amp; Engineering</div>
+        <div class="edu-meta">Sep 2024 – Present · CGPA: 7.68/10 · Chennai, India</div>
+      </div>
+      <div class="edu-item">
+        <div class="edu-inst">Srimathi Sundaravalli Memorial School</div>
+        <div class="edu-degree">Class XII · CBSE · 83%</div>
+        <div class="edu-meta">April 2021 – March 2023 · Computer Science: 91%</div>
+      </div>
+      <div style="margin-top:1.5rem;">
+        <div class="about-card-title">// location</div>
+        <div style="font-size:0.82rem; color:var(--text-muted);">Chennai, Tamil Nadu, India</div>
+      </div>
+      <div style="margin-top:1.5rem;">
+        <div class="about-card-title">// languages</div>
+        <div style="font-size:0.82rem; color:var(--text-muted);">Tamil (Native) · English (Fluent)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ EXPERIENCE ═══ -->
+<section id="experience">
+  <div class="section-label">// 02 — EXPERIENCE</div>
+  <h2 class="section-title reveal">where i've worked</h2>
+  <div class="timeline">
+
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-date">DEC 2025 — JAN 2026</div>
+      <div class="timeline-company">Centre for Development of Advanced Computing (C-DAC)</div>
+      <div class="timeline-role">Project Intern · Chennai, India</div>
+      <div class="timeline-card">
+        <ul class="timeline-bullets">
+          <li>Implemented key use cases for "Zero Day Attack Detection on Streaming Log Data," processing over 1GB of logs per hour in a research-driven environment.</li>
+          <li>Optimized log analysis workflows to reduce processing latency by 15%, meeting strict production timelines.</li>
+          <li>Contributed to the implementation of real-time threat detection pipelines under the Software Engineering Group at C-DAC Chennai.</li>
+          <li>Recognized as sincere, hard-working, and punctual by Joint Director Dr. K Vijay Kumar.</li>
+        </ul>
+        <div class="tag-list" style="margin-top:1rem;">
+          <span class="tag">Log Analysis</span>
+          <span class="tag">Streaming Data</span>
+          <span class="tag">Zero-Day Detection</span>
+          <span class="tag">C-DAC Chennai</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Interact button -->
-    <button class="interact-btn" data-action="interact">⏎</button>
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div class="timeline-date">JUN 2025 — JUL 2025</div>
+      <div class="timeline-company">Arich Infotech</div>
+      <div class="timeline-role">DevOps Intern · Perungudi, India</div>
+      <div class="timeline-card">
+        <ul class="timeline-bullets">
+          <li>Provisioned and managed 10+ virtualized environments using VMware to simulate complex deployment and configuration workflows.</li>
+          <li>Automated routine system tasks, reducing manual configuration time by 20% and improving operational efficiency within the team.</li>
+        </ul>
+        <div class="tag-list" style="margin-top:1rem;">
+          <span class="tag">VMware</span>
+          <span class="tag">DevOps</span>
+          <span class="tag">Automation</span>
+          <span class="tag">Infrastructure</span>
+        </div>
+      </div>
+    </div>
 
-    <script src="main.js"></script>
+  </div>
+</section>
+
+<!-- ═══ PROJECTS ═══ -->
+<section id="projects">
+  <div class="section-label">// 03 — PROJECTS</div>
+  <h2 class="section-title reveal">things i've built</h2>
+  <div class="projects-grid">
+
+    <div class="project-card">
+      <div class="project-icon">⚡</div>
+      <div class="project-name">GPU-Accelerated N-Body Gravity Simulator</div>
+      <div class="project-tech">CUDA C++ · OpenGL · Dear ImGui · GLSL</div>
+      <div class="project-desc">Real-time physics engine using CUDA C++ to simulate gravitational interactions for 50,000+ particles simultaneously. Custom GLSL shaders with CUDA-OpenGL interop for real-time visualization.</div>
+      <div class="project-metrics">
+        <span class="metric">3× throughput ↑</span>
+        <span class="metric">50K+ particles</span>
+        <span class="metric">shared memory tiling</span>
+      </div>
+    </div>
+
+    <div class="project-card">
+      <div class="project-icon">🖥</div>
+      <div class="project-name">Custom Linux Development Environment</div>
+      <div class="project-tech">Arch Linux · Hyprland · Lua · Fish Shell</div>
+      <div class="project-desc">Architected a high-performance Arch Linux system with the Hyprland tiling window manager. Custom Fish shell scripts for optimized resource monitoring and workflow automation.</div>
+      <div class="project-metrics">
+        <span class="metric">Hyprland WM</span>
+        <span class="metric">Fish scripting</span>
+        <span class="metric">custom Lua config</span>
+      </div>
+    </div>
+
+    <div class="project-card">
+      <div class="project-icon">🛡</div>
+      <div class="project-name">Zero Day Attack Detection System</div>
+      <div class="project-tech">Python · Log Analysis · Streaming · C-DAC Research</div>
+      <div class="project-desc">Research-grade threat detection pipeline processing 1GB+ of streaming log data per hour. Implemented core use cases for anomaly detection under production timelines at C-DAC Chennai.</div>
+      <div class="project-metrics">
+        <span class="metric">1GB/hr logs</span>
+        <span class="metric">15% latency ↓</span>
+        <span class="metric">C-DAC certified</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ SKILLS ═══ -->
+<section id="skills">
+  <div class="section-label">// 04 — SKILLS</div>
+  <h2 class="section-title reveal">tools of the trade</h2>
+  <div class="skills-grid">
+
+    <div class="skill-group">
+      <div class="skill-group-title">HPC &amp; Systems</div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">CUDA / GPU Programming</span><span class="skill-level">advanced</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="88"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">C / C++</span><span class="skill-level">advanced</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="90"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">Parallel Programming</span><span class="skill-level">proficient</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="80"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">Linux (Arch/Hyprland)</span><span class="skill-level">expert</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="95"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">Shell Scripting (Fish)</span><span class="skill-level">proficient</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="78"></div></div>
+      </div>
+      <div class="skill-tags">
+        <span class="skill-tag">OpenGL</span><span class="skill-tag">GLSL</span>
+        <span class="skill-tag">shared memory</span><span class="skill-tag">DSA</span><span class="skill-tag">OOP</span>
+      </div>
+    </div>
+
+    <div class="skill-group">
+      <div class="skill-group-title">Dev &amp; Web Stack</div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">Python</span><span class="skill-level">advanced</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="85"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">Java</span><span class="skill-level">proficient</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="75"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">JavaScript / SQL</span><span class="skill-level">proficient</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="72"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">Docker / DevOps</span><span class="skill-level">intermediate</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="68"></div></div>
+      </div>
+      <div class="skill-item">
+        <div class="skill-header"><span class="skill-name">MongoDB / MySQL</span><span class="skill-level">intermediate</span></div>
+        <div class="skill-bar"><div class="skill-fill" data-w="65"></div></div>
+      </div>
+      <div class="skill-tags">
+        <span class="skill-tag">Git/GitHub</span><span class="skill-tag">VMware</span>
+        <span class="skill-tag">UiPath</span><span class="skill-tag">UI/UX</span><span class="skill-tag">Lua</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ CONTACT ═══ -->
+<section id="contact">
+  <div class="section-label">// 05 — CONTACT</div>
+  <h2 class="section-title">let's connect</h2>
+  <p class="contact-desc">Open to research collaborations, HPC projects, and interesting engineering challenges. Feel free to reach out.</p>
+  <div class="contact-links">
+    <a href="mailto:rickys4212@gmail.com" class="contact-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
+      rickys4212@gmail.com
+    </a>
+    <a href="tel:+918438379160" class="contact-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.06 6.06l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      +91 84383 79160
+    </a>
+    <a href="https://linkedin.com/in/rickystech" target="_blank" class="contact-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+      linkedin/rickystech
+    </a>
+    <a href="https://github.com/Ricky-131" target="_blank" class="contact-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+      github/rickys
+    </a>
+  </div>
+</section>
+
+<footer>
+  <span style="color:var(--violet)">Ricky S</span> · built with precision · Chennai, India · 2026
+</footer>
+
+<script src="main.js"></script>
 </body>
 </html>
