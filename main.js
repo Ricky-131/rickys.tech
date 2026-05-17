@@ -140,7 +140,6 @@ const roles = [
   'HPC_Researcher()',
   'DevOps_Engineer()',
   'Systems_Programmer()',
-  'Linux_Ricer()',
 ];
 let ri = 0, ci = 0, deleting = false;
 const tw = document.getElementById('typewriter');
