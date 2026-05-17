@@ -1,26 +1,29 @@
-// ── CURSOR ──
+// ── CURSOR (desktop/mouse only) ──
 const cursor = document.getElementById('cursor');
 const trail  = document.getElementById('cursor-trail');
-let mx = window.innerWidth / 2, my = window.innerHeight / 2;
-let tx = mx, ty = my;
-const LERP = 0.13;
 
-document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+if (window.matchMedia('(pointer: fine)').matches) {
+  let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+  let tx = mx, ty = my;
+  const LERP = 0.13;
 
-(function tickCursor() {
-  cursor.style.left = mx + 'px';
-  cursor.style.top  = my + 'px';
-  tx += (mx - tx) * LERP;
-  ty += (my - ty) * LERP;
-  trail.style.left = tx + 'px';
-  trail.style.top  = ty + 'px';
-  requestAnimationFrame(tickCursor);
-})();
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
 
-document.querySelectorAll('a, button').forEach(el => {
-  el.addEventListener('mouseenter', () => { cursor.classList.add('hovering');    trail.classList.add('hovering'); });
-  el.addEventListener('mouseleave', () => { cursor.classList.remove('hovering'); trail.classList.remove('hovering'); });
-});
+  (function tickCursor() {
+    cursor.style.left = mx + 'px';
+    cursor.style.top  = my + 'px';
+    tx += (mx - tx) * LERP;
+    ty += (my - ty) * LERP;
+    trail.style.left = tx + 'px';
+    trail.style.top  = ty + 'px';
+    requestAnimationFrame(tickCursor);
+  })();
+
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => { cursor.classList.add('hovering');    trail.classList.add('hovering'); });
+    el.addEventListener('mouseleave', () => { cursor.classList.remove('hovering'); trail.classList.remove('hovering'); });
+  });
+}
 
 // ── GPU THREAD CANVAS ──
 const canvas = document.getElementById('gpu-canvas');
@@ -137,7 +140,7 @@ const roles = [
   'HPC_Researcher()',
   'DevOps_Engineer()',
   'Systems_Programmer()',
-  // 'Linux_Ricer()',
+  'Linux_Ricer()',
 ];
 let ri = 0, ci = 0, deleting = false;
 const tw = document.getElementById('typewriter');

@@ -26,6 +26,12 @@ body {
   cursor: none;
 }
 
+/* Touch/mobile: restore default cursor, hide custom cursor elements */
+@media (pointer: coarse) {
+  body, a, button { cursor: auto !important; }
+  #cursor, #cursor-trail { display: none !important; }
+}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
@@ -381,7 +387,29 @@ footer {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  nav { padding: 1rem 1.5rem; }
+  /* Navbar: hide logo, let links fill the bar and scroll if needed */
+  nav {
+    padding: 0;
+    justify-content: center;
+  }
+  .nav-logo { display: none; }
+  .nav-links {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;          /* Firefox */
+    gap: 0;
+    padding: 0 0.5rem;
+  }
+  .nav-links::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+  .nav-links li { flex-shrink: 0; }
+  .nav-links a {
+    display: block;
+    padding: 0.9rem 1rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
   section { padding: 5rem 1.5rem; }
   #about .about-grid { grid-template-columns: 1fr; }
   #skills .skills-grid { grid-template-columns: 1fr; }
